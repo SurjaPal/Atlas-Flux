@@ -1,0 +1,10 @@
+node_modules/
+artifacts/
+cache/
+coverage/
+layer5/dashboard.html
+layer5/data/
+pipeline/data/
+package-lock.json
+layer0/model.json
+layer0/model_comparison.json

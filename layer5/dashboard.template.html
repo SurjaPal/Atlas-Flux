@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Atlas Flux — Feeder Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #121b2e;
+    --panel-border: #223151;
+    --text: #e7edf7;
+    --text-dim: #8ea0bd;
+    --accent: #ffb454;
+    --accent-dim: #7a5a2c;
+    --good: #4fd1a5;
+    --bad: #ff6b6b;
+    --warn: #ffb454;
+    --mono: "IBM Plex Mono", "SF Mono", Consolas, monospace;
+    --sans: "IBM Plex Sans", Inter, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+  }
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  header .sub {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    font-family: var(--mono);
+  }
+  nav {
+    display: flex;
+    gap: 4px;
+    padding: 16px 32px 0;
+  }
+  nav button {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--text-dim);
+    padding: 8px 18px;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+  }
+  nav button.active {
+    background: var(--panel);
+    color: var(--accent);
+    border-color: var(--panel-border);
+    border-bottom-color: var(--panel);
+  }
+  main {
+    padding: 0 32px 40px;
+  }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 24px 0;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .stat .value {
+    font-family: var(--mono);
+    font-size: 1.6rem;
+    color: var(--accent);
+  }
+  .stat .label {
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    margin-top: 2px;
+  }
+
+  section.panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+  section.panel h2 {
+    margin: 0 0 14px;
+    font-size: 1rem;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--panel-border);
+    white-space: nowrap;
+  }
+  th {
+    color: var(--text-dim);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  td.mono, th.mono { font-family: var(--mono); }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 100px;
+    font-size: 0.72rem;
+    font-family: var(--mono);
+  }
+  .pill.charge { background: #1c3a2e; color: var(--good); }
+  .pill.discharge { background: #1c2f45; color: #7bb8ff; }
+  .pill.shed { background: #402323; color: var(--bad); }
+  .pill.isolated { background: #402323; color: var(--bad); }
+  .pill.ok { background: #1c3a2e; color: var(--good); }
+
+  .trust-bar-track {
+    width: 90px;
+    height: 6px;
+    background: #1c2740;
+    border-radius: 3px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .trust-bar-fill { height: 100%; background: var(--good); }
+  .trust-bar-fill.low { background: var(--bad); }
+
+  .risk-track {
+    width: 100%;
+    height: 8px;
+    background: #1c2740;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .risk-fill { height: 100%; }
+
+  .household-card {
+    background: #0e1727;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .household-card .id { font-family: var(--mono); font-size: 0.85rem; }
+  .household-card .meta { color: var(--text-dim); font-size: 0.78rem; }
+
+  footer {
+    padding: 20px 32px 40px;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    font-family: var(--mono);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Atlas Flux — Feeder Dashboard</h1>
+    <div class="sub" id="feeder-sub"></div>
+  </div>
+  <div class="sub" id="generated-sub"></div>
+</header>
+
+<nav>
+  <button class="active" data-view="discom">DISCOM view</button>
+  <button data-view="household">Household view</button>
+</nav>
+
+<main>
+  <section id="discom" class="view active">
+    <div class="stat-row" id="discom-stats"></div>
+
+    <section class="panel">
+      <h2>Hourly schedule &amp; shortfall risk</h2>
+      <table id="rounds-table">
+        <thead>
+          <tr><th>Hour</th><th>Demand</th><th>Solar</th><th>Gap</th><th>Risk</th><th>Action</th><th>Shed</th><th>Isolated (excluded)</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Device trust scores</h2>
+      <table id="devices-table">
+        <thead>
+          <tr><th>Device</th><th>Type</th><th>Trust score</th><th>Status</th><th>Attestations</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </section>
+
+  <section id="household" class="view">
+    <div class="stat-row" id="household-stats"></div>
+    <section class="panel">
+      <h2>Fairness rotation queue</h2>
+      <div id="household-list"></div>
+    </section>
+  </section>
+</main>
+
+<footer>
+  Atlas Flux — Yuva Yodha Energy Tech Hackathon 2026, Challenge 03. Functional wireframe (Layer 5) reading a static demo snapshot — not a live feed.
+</footer>
+
+<script id="demo-data" type="application/json">__DEMO_DATA_JSON__</script>
+<script>
+  const data = JSON.parse(document.getElementById('demo-data').textContent);
+
+  document.getElementById('feeder-sub').textContent = `Feeder: ${data.feederId}  ·  Ledger ${data.contracts.auditLedger.slice(0,10)}…  ·  ChitFund ${data.contracts.chitFund.slice(0,10)}…`;
+  document.getElementById('generated-sub').textContent = `Snapshot generated ${new Date(data.generatedAt).toLocaleString()}`;
+
+  // ---- Nav ----
+  document.querySelectorAll('nav button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav button').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.view).classList.add('active');
+    });
+  });
+
+  // ---- DISCOM stats ----
+  const s = data.summary;
+  const statHtml = (value, label) => `<div class="stat"><div class="value">${value}</div><div class="label">${label}</div></div>`;
+  document.getElementById('discom-stats').innerHTML = [
+    statHtml(s.attestationCount, 'Attestations logged'),
+    statHtml(s.dispatchCount, 'Dispatch commands'),
+    statHtml(s.fraudFlagCount, 'Fraud flags raised'),
+    statHtml(s.batchCount, 'Telemetry batches anchored'),
+    statHtml(s.isolatedDeviceCount, 'Devices isolated'),
+    statHtml((Number(s.fundBalanceWei) / 1e18).toFixed(3) + ' ETH', 'Chit fund balance'),
+  ].join('');
+
+  // ---- Rounds table ----
+  const modeClass = { CHARGE: 'charge', DISCHARGE_THERMAL: 'discharge', DISCHARGE_THERMAL_AND_BATTERY: 'discharge', SHED_LOAD: 'shed' };
+  const roundsBody = document.querySelector('#rounds-table tbody');
+  roundsBody.innerHTML = data.rounds.map((r) => `
+    <tr>
+      <td class="mono">${String(r.hour).padStart(2,'0')}:00</td>
+      <td class="mono">${r.demandKW} kW</td>
+      <td class="mono">${r.solarKW} kW</td>
+      <td class="mono">${r.gapKW} kW</td>
+      <td>
+        <div class="risk-track"><div class="risk-fill" style="width:${r.riskScore}%; background:${r.riskScore >= 60 ? 'var(--bad)' : r.riskScore >= 30 ? 'var(--warn)' : 'var(--good)'}"></div></div>
+      </td>
+      <td><span class="pill ${modeClass[r.dispatchMode] || ''}">${r.dispatchMode}</span></td>
+      <td class="mono">${r.shed.length ? r.shed.map(h => h.split('-').pop()).join(', ') : '—'}</td>
+      <td class="mono">${r.isolatedExcluded.length ? r.isolatedExcluded.map(h => h.split('-').pop()).join(', ') : '—'}</td>
+    </tr>
+  `).join('');
+
+  // ---- Devices table ----
+  const devicesBody = document.querySelector('#devices-table tbody');
+  devicesBody.innerHTML = data.devices.map((d) => `
+    <tr>
+      <td class="mono">${d.deviceHumanId}</td>
+      <td>${d.type}</td>
+      <td>
+        <span class="trust-bar-track"><span class="trust-bar-fill ${d.trustScore < 500 ? 'low' : ''}" style="width:${d.trustScore/10}%"></span></span>
+        <span class="mono">${d.trustScore}</span>
+      </td>
+      <td>${d.isolated ? '<span class="pill isolated">isolated</span>' : '<span class="pill ok">trusted</span>'}</td>
+      <td class="mono">${d.attestations}</td>
+    </tr>
+  `).join('');
+
+  // ---- Household view ----
+  const shedCounts = {};
+  const protectCounts = {};
+  data.rounds.forEach((r) => {
+    r.shed.forEach((h) => shedCounts[h] = (shedCounts[h] || 0) + 1);
+    r.protect.forEach((h) => protectCounts[h] = (protectCounts[h] || 0) + 1);
+  });
+
+  document.getElementById('household-stats').innerHTML = [
+    statHtml(data.households.length, 'Member households'),
+    statHtml((Number(s.fundBalanceWei) / 1e18).toFixed(3) + ' ETH', 'Pooled fund balance'),
+  ].join('');
+
+  const sorted = [...data.households].sort((a, b) => (a.lastServedAt || 0) - (b.lastServedAt || 0));
+  document.getElementById('household-list').innerHTML = sorted.map((h, i) => `
+    <div class="household-card">
+      <div>
+        <div class="id">${h.humanId}</div>
+        <div class="meta">contributed ${(Number(h.totalContributedWei) / 1e18).toFixed(3)} ETH · served ${h.timesServed}× · shed ${shedCounts[h.humanId] || 0}× today</div>
+      </div>
+      <div>${i === 0 ? '<span class="pill ok">next in rotation</span>' : ''}</div>
+    </div>
+  `).join('');
+</script>
+</body>
+</html>

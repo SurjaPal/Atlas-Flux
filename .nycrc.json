@@ -1,0 +1,7 @@
+{
+  "all": true,
+  "include": ["layer0/**", "layer1/**", "layer2/**", "layer3/**", "layer5/buildDashboard.js", "pipeline/**", "runFullDemo.js"],
+  "exclude": ["pipeline/data/**", "layer5/data/**", "test/**", "pipeline/runDemo.js"],
+  "reporter": ["text", "html"],
+  "check-coverage": false
+}

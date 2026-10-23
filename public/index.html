@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Atlas Flux — Grid Reliability Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-surface-hover: #f1f5f9;
+    --border-subtle: #e2e8f0;
+    --border-strong: #cbd5e1;
+    
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-tertiary: #64748b;
+    
+    --brand-primary: #059669;
+    --brand-primary-alpha: rgba(5, 150, 105, 0.1);
+    --brand-secondary: #0ea5e9;
+    --brand-solar: #f59e0b;
+    
+    --status-success: #059669;
+    --status-success-bg: rgba(5, 150, 105, 0.1);
+    --status-warning: #f59e0b;
+    --status-warning-bg: rgba(245, 158, 11, 0.1);
+    --status-danger: #ef4444;
+    --status-danger-bg: rgba(239, 68, 68, 0.1);
+    
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', Consolas, monospace;
+    
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+  
+  * { box-sizing: border-box; }
+  
+  body { margin: 0; background-color: var(--bg-base); color: var(--text-primary); font-family: var(--font-sans); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  header { background-color: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+  .header-brand { display: flex; align-items: center; gap: 16px; }
+  .logo-box { width: 36px; height: 36px; background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-weight: 700; color: white; }
+  h1 { font-size: 1.25rem; font-weight: 700; margin: 0; color: #1e293b; }
+  .header-meta { font-size: 0.875rem; color: var(--text-secondary); display: flex; align-items: center; gap: 24px; }
+  
+  /* --- CONTROL PANEL --- */
+  .control-panel { background: var(--bg-surface); padding: 12px 40px; border-bottom: 1px solid var(--border-subtle); display: flex; gap: 16px; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+  .nav-tabs { display: flex; gap: 12px; margin-right: auto; }
+  .tab-btn { background: transparent; border: none; padding: 8px 12px; font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; }
+  .tab-btn.active { color: var(--brand-primary); border-bottom: 2px solid var(--brand-primary); }
+
+  .btn { border: none; border-radius: var(--radius-sm); padding: 8px 16px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--brand-primary); color: white; }
+  .btn-secondary { background: var(--bg-surface-hover); border: 1px solid var(--border-subtle); color: var(--text-primary); }
+  .btn-danger { background: var(--status-danger); color: white; }
+  .status-text { font-family: var(--font-mono); font-size: 0.875rem; color: var(--brand-primary); font-weight: 500; }
+
+  /* --- LAYOUT --- */
+  main { padding: 30px 40px; max-width: 1600px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .grid-2col { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; }
+
+  /* --- STAT CARDS --- */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .stat-card { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 24px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--border-subtle); }
+  .stat-card:nth-child(1)::before { background: var(--brand-secondary); }
+  .stat-card:nth-child(2)::before { background: var(--brand-primary); }
+  .stat-card:nth-child(3)::before { background: var(--status-danger); }
+  .stat-card:nth-child(4)::before { background: var(--brand-solar); }
+  .stat-label { font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-value { font-size: 2.25rem; font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); letter-spacing: -0.05em; }
+
+  /* --- PANELS & TABLES --- */
+  .panel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; }
+  .panel-header { padding: 16px 24px; border-bottom: 1px solid var(--border-subtle); background: #f8fafc; font-weight: 700; color: #1e293b; display: flex; justify-content: space-between; }
+  table { width: 100%; border-collapse: collapse; text-align: left; }
+  th { padding: 12px 24px; font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; border-bottom: 2px solid var(--border-subtle); background: #f1f5f9; }
+  td { padding: 16px 24px; font-size: 0.875rem; border-bottom: 1px solid var(--border-subtle); color: var(--text-secondary); }
+  .mono { font-family: var(--font-mono); }
+  
+  .badge { display: inline-flex; padding: 4px 10px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; font-family: var(--font-mono); text-transform: uppercase; }
+  .badge-charge { background: var(--status-success-bg); color: var(--status-success); }
+  .badge-discharge { background: var(--brand-primary-alpha); color: var(--brand-secondary); }
+  .badge-shed { background: var(--status-danger-bg); color: var(--status-danger); }
+  .badge-neutral { background: #f1f5f9; color: var(--text-secondary); border: 1px solid var(--border-subtle); }
+  .list-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border-subtle); }
+  
+  /* --- CAPACITY BARS (LAYER 1) --- */
+  .storage-box { display: flex; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--border-subtle); }
+  .storage-label { width: 120px; font-weight: 600; font-size: 0.875rem; }
+  .storage-track { flex: 1; height: 12px; background: var(--border-subtle); border-radius: 99px; overflow: hidden; }
+  .storage-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+  .storage-fill.thermal { background: var(--status-danger); }
+  .storage-fill.battery { background: var(--brand-primary); }
+  .storage-val { font-family: var(--font-mono); font-size: 0.875rem; width: 80px; text-align: right; }
+
+  /* --- BLOCKCHAIN FEED (LAYER 4) --- */
+  .tx-feed { max-height: 400px; overflow-y: auto; background: #0f172a; color: #f8fafc; font-family: var(--font-mono); font-size: 0.8rem; }
+  .tx-item { padding: 12px 24px; border-bottom: 1px solid #1e293b; display: flex; gap: 16px; align-items: flex-start; }
+  .tx-time { color: var(--text-tertiary); min-width: 70px; }
+  .tx-layer { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+  .tx-hash { color: var(--brand-secondary); font-weight: 600; }
+  .tx-desc { color: #cbd5e1; }
+
+  /* --- DIAGNOSTICS VIEW --- */
+  .diag-section { background: #0f172a; color: #f8fafc; border-radius: var(--radius-md); padding: 24px; margin-bottom: 24px; font-family: var(--font-mono); }
+  .diag-section h3 { color: var(--brand-secondary); margin-top: 0; font-family: var(--font-sans); border-bottom: 1px solid #334155; padding-bottom: 12px; }
+  .code-block { background: #020617; padding: 16px; border-radius: var(--radius-sm); color: #a5b4fc; font-size: 0.85rem; overflow-x: auto; border: 1px solid #1e293b; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand"><div class="logo-box">AF</div><h1>Atlas Flux Enterprise</h1></div>
+  <div class="header-meta"><span id="feeder-id" class="mono">No Active Connection</span></div>
+</header>
+
+<div class="control-panel">
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchView('discom')">Grid Overview</button>
+    <button class="tab-btn" onclick="switchView('blockchain')">Blockchain Ledger (L4)</button>
+    <button class="tab-btn" onclick="switchView('diagnostics')">Deep Dive Diagnostics</button>
+  </div>
+  <button class="btn btn-primary" id="btn-init" onclick="initGrid()">1. Initialize Grid</button>
+  <button class="btn btn-secondary" id="btn-step" onclick="stepSimulation()" disabled>2. Advance Time (1H)</button>
+  <button class="btn btn-danger" id="btn-fault" onclick="simulateFault()" disabled>3. Inject Cyberattack</button>
+  <div class="status-text" id="api-status">Awaiting Init...</div>
+</div>
+
+<main>
+  
+  <!-- VIEW: DISCOM DASHBOARD -->
+  <div id="view-discom" class="view active">
+    <div class="stats-row" id="kpi-container">
+      <div class="stat-card"><div class="stat-label">System Attestations</div><div class="stat-value">--</div></div>
+      <div class="stat-card"><div class="stat-label">Grid Operations</div><div class="stat-value">--</div></div>
+      <div class="stat-card"><div class="stat-label">Security Incidents</div><div class="stat-value">--</div></div>
+      <div class="stat-card"><div class="stat-label">Chit Fund TVL (ETH)</div><div class="stat-value">--</div></div>
+    </div>
+    
+    <div class="grid-2col">
+      <div style="display: flex; flex-direction: column; gap: 32px;">
+        <div class="panel">
+          <div class="panel-header">Automated Dispatch Log (Layer 3)</div>
+          <table id="dispatch-table">
+            <thead><tr><th>Time</th><th>Demand</th><th>Solar</th><th>Gap</th><th>Action</th><th>Shed Targets</th></tr></thead>
+            <tbody><tr><td colspan="6" style="text-align:center;">No operations logged.</td></tr></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <div class="panel-header">Physical Storage Capacity (Layer 1)</div>
+          <div id="storage-container">
+            <div style="padding: 24px; text-align:center; color: var(--text-tertiary);">Awaiting Grid Initialization...</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 32px;">
+        <div class="panel">
+          <div class="panel-header">Endpoint Trust Matrix (Layer 0)</div>
+          <table id="trust-table">
+            <thead><tr><th>Node ID</th><th>Trust Score</th><th>Status</th></tr></thead>
+            <tbody><tr><td colspan="3" style="text-align:center;">Initialize grid.</td></tr></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <div class="panel-header">Fairness Rotation (Layer 1)</div>
+          <div class="list-group" id="rotation-list"><div style="padding:16px; text-align:center;">Empty</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: BLOCKCHAIN -->
+  <div id="view-blockchain" class="view">
+    <div class="panel">
+      <div class="panel-header">
+        AuditLedger Immutable Feed (Layer 4)
+        <span class="badge badge-charge">Connected to Blockchain</span>
+      </div>
+      <div class="tx-feed" id="tx-feed">
+        <div style="padding: 24px; text-align:center; color: var(--text-tertiary);">No transactions found.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: DEEP DIVE DIAGNOSTICS -->
+  <div id="view-diagnostics" class="view">
+    
+    <div class="diag-section">
+      <h3>Layer 0: Neural Network & Threat Mesh Evaluator</h3>
+      <p style="font-family: var(--font-sans); color: #94a3b8; font-size: 0.9rem;">
+        The MLP classifier processes local graph vectors, while the <b>Federated Threat Mesh</b> scans the Ethereum blockchain for matching cyberattack SimHashes published by other feeders!
+      </p>
+      <div id="diag-layer0" class="code-block">Awaiting telemetry...</div>
+    </div>
+
+    <div class="diag-section">
+      <h3>Layer 2: Forecasting Engine Math</h3>
+      <div id="diag-layer2" class="code-block">Awaiting forecast execution...</div>
+    </div>
+
+    <div class="diag-section">
+      <h3>Layer 3 & 4: Dispatch Decision Matrix</h3>
+      <div id="diag-layer3" class="code-block">Awaiting dispatch planning...</div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+  function switchView(viewName) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`view-${viewName}`).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  const modeBadge = { CHARGE: 'badge-charge', DISCHARGE_THERMAL: 'badge-discharge', DISCHARGE_THERMAL_AND_BATTERY: 'badge-discharge', SHED_LOAD: 'badge-shed' };
+  
+  const btnInit = document.getElementById('btn-init');
+  const btnStep = document.getElementById('btn-step');
+  const btnFault = document.getElementById('btn-fault');
+  const apiStatus = document.getElementById('api-status');
+
+  function setStatus(msg) { apiStatus.textContent = msg; }
+
+  async function fetchLiveState() {
+    try {
+        const response = await fetch('/api/state');
+        if (!response.ok) return;
+        const data = await response.json();
+        renderData(data);
+        
+        btnInit.textContent = "Reset Grid";
+        if (data.simulationComplete) {
+            btnStep.disabled = true; btnFault.disabled = true;
+            setStatus("Simulation Day Complete.");
+        } else {
+            btnStep.disabled = false; btnFault.disabled = false;
+        }
+    } catch (e) { console.error("Sync Error", e); }
+  }
+
+  async function initGrid() {
+    btnInit.disabled = true; setStatus("Deploying Contracts & Attesting...");
+    await fetch('/api/init', { method: 'POST' });
+    await fetchLiveState();
+    btnInit.disabled = false; setStatus("Grid Network Online.");
+  }
+
+  async function stepSimulation() {
+    btnStep.disabled = true; btnFault.disabled = true; setStatus("Computing Forecast & Dispatch...");
+    await fetch('/api/step', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fault: false }) });
+    await fetchLiveState();
+    setStatus("Time advanced.");
+  }
+
+  async function simulateFault() {
+    btnStep.disabled = true; btnFault.disabled = true; setStatus("Injecting Malicious Payload...");
+    await fetch('/api/step', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fault: true }) });
+    await fetchLiveState();
+    setStatus("Anomaly Detected & Nodes Isolated.");
+  }
+
+  function renderData(data) {
+    document.getElementById('feeder-id').textContent = `Feeder: ${data.feederId}`;
+    
+    // KPIs
+    const s = data.summary;
+    document.getElementById('kpi-container').innerHTML = `
+      <div class="stat-card"><div class="stat-label">System Attestations</div><div class="stat-value">${s.attestationCount}</div></div>
+      <div class="stat-card"><div class="stat-label">Grid Operations</div><div class="stat-value">${s.dispatchCount}</div></div>
+      <div class="stat-card"><div class="stat-label">Security Incidents</div><div class="stat-value ${s.fraudFlagCount > 0 ? 'danger' : ''}">${s.fraudFlagCount}</div></div>
+      <div class="stat-card"><div class="stat-label">Chit Fund TVL (ETH)</div><div class="stat-value">${(Number(s.fundBalanceWei) / 1e18).toFixed(3)}</div></div>
+    `;
+
+    // Dispatch Table
+    const dispatchBody = document.querySelector('#dispatch-table tbody');
+    if (data.rounds.length === 0) {
+        dispatchBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No operations logged yet.</td></tr>';
+    } else {
+        dispatchBody.innerHTML = data.rounds.map((r) => {
+          const formattedShed = r.shed.length ? r.shed.map(h => h.split('-').pop()).join(', ') : '—';
+          return `
+            <tr>
+              <td class="primary mono">${String(r.hour).padStart(2,'0')}:00</td>
+              <td class="mono">${r.demandKW.toFixed(2)}</td>
+              <td class="mono">${r.solarKW.toFixed(2)}</td>
+              <td class="mono">${r.gapKW.toFixed(2)}</td>
+              <td><span class="badge ${modeBadge[r.dispatchMode] || 'badge-neutral'}">${r.dispatchMode.replace(/_/g, ' ')}</span></td>
+              <td class="mono">${formattedShed}</td>
+            </tr>`;
+        }).join('');
+        
+        // Physical Storage Capacity (Layer 1) Update
+        const latestRound = data.rounds[data.rounds.length - 1];
+        const thermalPct = (latestRound.thermalStateOfChargeKWh / 28) * 100;
+        const batteryPct = (latestRound.batteryStateOfChargeKWh / 8) * 100;
+        
+        document.getElementById('storage-container').innerHTML = `
+          <div class="storage-box">
+            <div class="storage-label">Thermal Unit<br><span style="font-size:0.7rem; color:var(--text-tertiary); font-weight:400;">Capacity: 28 kWh</span></div>
+            <div class="storage-track"><div class="storage-fill thermal" style="width: ${thermalPct}%"></div></div>
+            <div class="storage-val">${latestRound.thermalStateOfChargeKWh.toFixed(1)} kWh</div>
+          </div>
+          <div class="storage-box">
+            <div class="storage-label">Battery Pack<br><span style="font-size:0.7rem; color:var(--text-tertiary); font-weight:400;">Capacity: 8 kWh</span></div>
+            <div class="storage-track"><div class="storage-fill battery" style="width: ${batteryPct}%"></div></div>
+            <div class="storage-val">${latestRound.batteryStateOfChargeKWh.toFixed(1)} kWh</div>
+          </div>
+        `;
+    }
+
+    // Trust Matrix
+    document.querySelector('#trust-table tbody').innerHTML = data.devices.filter(d => d.type === 'RELAY').map((d) => `
+        <tr>
+          <td class="primary mono">${d.deviceHumanId.replace('feeder-12-baner-', '')}</td>
+          <td class="mono" style="color: ${d.trustScore < 500 ? 'var(--status-danger)' : 'var(--text-primary)'}">${d.trustScore} / 1000</td>
+          <td>${d.isolated ? '<span class="badge badge-shed">Isolated</span>' : '<span class="badge badge-charge">Trusted</span>'}</td>
+        </tr>`).join('');
+
+    // Fairness Rotation
+    const sortedHouseholds = [...data.households].sort((a, b) => (a.lastServedAt || 0) - (b.lastServedAt || 0));
+    document.getElementById('rotation-list').innerHTML = sortedHouseholds.map((h, i) => `
+        <div class="list-item">
+          <div><div class="list-title">${h.humanId.replace('feeder-12-baner-', '')}</div></div>
+          <div>${i === 0 ? '<span class="badge badge-charge">Priority Target</span>' : '<span class="badge badge-neutral">Standby</span>'}</div>
+        </div>`).join('');
+
+    // Blockchain Feed
+    if (data.blockchainTxs && data.blockchainTxs.length > 0) {
+        document.getElementById('tx-feed').innerHTML = data.blockchainTxs.map(tx => `
+          <div class="tx-item">
+            <div class="tx-time">${tx.timestamp}</div>
+            <div class="tx-layer">${tx.layer}</div>
+            <div style="flex:1;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="font-weight:700; color:var(--bg-base);">${tx.action}</span>
+                <span class="tx-hash">${tx.hash}</span>
+              </div>
+              <div class="tx-desc">${tx.details}</div>
+            </div>
+          </div>
+        `).join('');
+    }
+
+    // Render Diagnostics
+    if (data.diagnostics) {
+        if (data.diagnostics.layer0.topScores.length > 0) {
+            document.getElementById('diag-layer0').innerHTML = `
+<b>Event Trigger:</b> ${data.diagnostics.layer0.lastRun}
+
+<b>Top Evaluated Relay Nodes:</b>
+${data.diagnostics.layer0.topScores.map(d => `
+Node ID      : ${d.id}
+Local Vector : [${d.vector.join(', ')}]
+Local Attack %: ${(d.prob * 100).toFixed(2)}%
+Mesh Sync    : ${d.meshContributed ? '<span style="color:#f59e0b">CORROBORATED BY GLOBAL THREAT MESH (Attack Flagged!)</span>' : 'No external match found'}
+Status       : ${d.flagged ? '<span style="color:#f87171">FLAGGED & ISOLATED</span>' : '<span style="color:#4ade80">CLEAN</span>'}
+`).join('\n')}`;
+        }
+        
+        if (data.diagnostics.layer2.forecastDetails) {
+            const l2 = data.diagnostics.layer2.forecastDetails;
+            document.getElementById('diag-layer2').innerHTML = `<b>Weather Inference Module:</b>\n- Cloud Cover Factor : ${(l2.cloudFactor * 100).toFixed(1)}% Penalty\n- Adjusted Solar Yield: ${l2.computedSolar.toFixed(2)} kW\n\n<b>Residual Load Correction Module:</b>\n- Historical Base Load : ${l2.baseDemand.toFixed(2)} kW\n- Adjusted Net Demand  : ${l2.correctedDemand.toFixed(2)} kW\n\n<b>Storage Check:</b>\n- Physical Buffer Available: ${l2.storageBufferRemaining.toFixed(2)} kWh`;
+        }
+
+        if (data.diagnostics.layer3.planDetails) {
+            const l3 = data.diagnostics.layer3.planDetails;
+            document.getElementById('diag-layer3').innerHTML = `<b>Dispatch Plan Engine Output:</b>\n- Determined Mode       : ${l3.mode}\n\n<b>Layer 0 Trust Gate Check:</b>\n- Devices forcefully skipped: [${l3.skipList.length > 0 ? l3.skipList.map(h => h.split('-').pop()).join(', ') : 'None'}]\n\n<b>Layer 1 Chit-Fund Rotation Application:</b>\n- Nodes receiving power : [${l3.protectList.map(h => h.split('-').pop()).join(', ')}]\n- Nodes shed (fairness) : [${l3.shedList.length > 0 ? l3.shedList.map(h => h.split('-').pop()).join(', ') : 'None'}]\n\n-> Submitting Plan to Layer 4 (AuditLedger Blockchain) for immutable anchoring...`;
+        }
+    }
+  }
+
+  fetchLiveState();
+</script>
+</body>
+</html>

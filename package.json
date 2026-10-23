@@ -1,0 +1,45 @@
+{
+  "name": "atlas-flux",
+  "version": "1.0.0",
+  "description": "Atlas Flux — full five-layer prototype (trust/attestation, chit-fund + thermal storage, forecasting, dispatch/fairness, blockchain audit ledger, dashboard). Yuva Yodha Energy Tech Hackathon 2026, Challenge 03.",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "compile:offline": "node scripts/compile.js",
+    "test": "hardhat test",
+    "test:offline": "hardhat test --no-compile",
+    "train:layer0": "node layer0/train.js",
+    "backtest:layer2": "node layer2/backtest.js",
+    "demo": "hardhat run pipeline/runDemo.js",
+    "demo:offline": "hardhat run pipeline/runDemo.js --no-compile",
+    "demo:full": "hardhat run runFullDemo.js",
+    "demo:full:offline": "hardhat run runFullDemo.js --no-compile",
+    "dashboard:build": "node layer5/buildDashboard.js",
+    "gas:report": "hardhat run scripts/gasReport.js"
+  },
+  "keywords": [
+    "atlas-flux",
+    "yuva-yodha",
+    "grid-reliability",
+    "audit-ledger",
+    "graphsage",
+    "chit-fund"
+  ],
+  "author": "Surja Pal",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/merkle-tree": "^1.0.8",
+    "eslint": "^9.39.5",
+    "hardhat": "^2.29.1",
+    "nyc": "^18.0.0",
+    "prettier": "^3.9.9",
+    "solc": "^0.8.24"
+  }
+}
